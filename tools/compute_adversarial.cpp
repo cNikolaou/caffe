@@ -5,6 +5,9 @@
 #include "gflags/gflags.h" // maybe it needs to change "" with <>
 #include "glog/logging.h"
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 // #include caffe files
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/net.hpp"
@@ -13,6 +16,9 @@
 // using declarations
 using caffe::Net;
 using caffe::Caffe;
+using cv::Mat;
+using cv::imread;
+using std::string;
 
 // FLAGS definitions
 DEFINE_string(model, "",
@@ -21,6 +27,24 @@ DEFINE_string(weights, "",
     "The weights of the model to initialize the network.");
 DEFINE_string(images, "",
     "The path to the folder that contains the image(s)");
+
+// function definitions
+void compute_perturbation(const Net<float>* network, string data) {
+
+  LOG(INFO) << "Start compute_perturbation";
+
+  Mat image;
+  image = imread(data, CV_LOAD_IMAGE_COLOR);
+
+  CHECK(!image.data) << "Could not open or find the image";
+
+  LOG(INFO) << "Call DeepFool algorithm";
+  // to be implemented
+  //deepfool(network, image);
+
+  LOG(INFO) << "DeepFool completed";
+
+}
 
 // main tool for computing adversarial images
 int main(int argc, char** argv) {
@@ -81,8 +105,7 @@ int main(int argc, char** argv) {
 
   /* --- compute perturbation --- */
   // call compute_perturbation(images,network)
-  // will be defined later
-  //compute_perturbation(network, images)
+  compute_perturbation(&caffe_net, path_to_images);
 
   return 0;
 }
