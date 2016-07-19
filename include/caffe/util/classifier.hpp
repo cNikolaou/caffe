@@ -31,7 +31,16 @@ class Classifier {
              const std::string& mean_file,
              const std::string& label_file);
 
+  // classify and image; returns the top-N labels and their probabilities
   std::vector<Prediction> Classify(const cv::Mat& img, int N = 5);
+
+  // use the img to make a prediction rearding its class; returns probabilities
+  std::vector<float> Predict(const cv::Mat& img);
+
+  // returns the gradient w.r.t. the input of the k-th classifier
+  std::vector<float> InputGradientofClassifier(const cv::Mat& img, int k = 0);
+
+  std::vector<string> get_layer_names();
 
  private:
   boost::shared_ptr<caffe::Net<float> > net_;
@@ -44,9 +53,6 @@ class Classifier {
   void SetMean(const std::string& mean_file);
 
   void WrapInputLayer(std::vector<cv::Mat>* input_channels);
-
-  // use the img to make a prediction rearding its class
-  std::vector<float> Predict(const cv::Mat& img);
 
   // preprocess the image
   void Preprocess(const cv::Mat& img,

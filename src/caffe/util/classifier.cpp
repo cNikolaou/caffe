@@ -11,6 +11,7 @@
 // STL libraries
 #include <algorithm>
 #include <string>
+#include <iostream>
 
 // caffe headers
 #include "caffe/util/classifier.hpp"
@@ -221,6 +222,69 @@ void Classifier::Preprocess(const cv::Mat& img,
   CHECK(reinterpret_cast<float*>(input_channels->at(0).data)
         == net_->input_blobs()[0]->cpu_data())
     << "Input channels are not wrapping the input layer of the network.";
+}
+
+std::vector<string> Classifier::get_layer_names() {
+
+  vector<string> layer_names = net_->layer_names();
+
+  for (size_t i = 0; i < layer_names.size(); ++i) {
+    std::cout << layer_names[i] << std::endl;
+  }
+
+  return layer_names;
+}
+
+
+
+std::vector<float> Classifier::InputGradientofClassifier(const cv::Mat& img,
+                                                         int k) {
+
+
+  Blob<float>* input_layer_1 = net_->input_blobs()[0];
+  input_layer_1->Reshape(1, num_channels_,
+                       input_geometry_.height, input_geometry_.width);
+  net_->Reshape();
+
+  std::vector<cv::Mat> input_channels;
+
+  WrapInputLayer(&input_channels);
+
+  Preprocess(img, &input_channels);
+
+  net_->Forward();
+
+  CHECK(k < labels_.size()) << "The classifier can discriminate "
+      << "over fewer classes";
+
+  Blob<float>* output_layer = net_->output_blobs()[0];
+  float* output_diff = output_layer->mutable_cpu_diff();
+
+
+  for (int i = 0; i < output_layer->count(); ++i) {
+    output_diff[i] = 0;
+  }
+  output_diff[k] = 1;
+
+  /* The following does the same thing as the last 4 lines
+  // NOTE: Maybe use blob->count as a constructor initializer
+  // NOTE: It might be better to intialize an array but vectors
+  //       should act like arrays if we pass them as &vec[0]
+  vector<float> output_val(labels_.size(), 0);
+  output_val[k] = 1;
+
+  CHECK(output_layer->count() == output_val.size())
+      << "The number of diff to set is different from the number that "
+      << "the output supports";
+
+  caffe_copy(output_layer->count(), &output_val[0], output_diff);
+  */
+  net_->Backward();
+
+  Blob<float>* input_layer = net_->input_blobs()[0];
+  const float* begin = input_layer->cpu_diff();
+  const float* end = begin + input_layer->count();
+  return std::vector<float>(begin, end);
 }
 
 } // namespace caffe
