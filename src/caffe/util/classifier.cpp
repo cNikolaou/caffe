@@ -11,7 +11,6 @@
 // STL libraries
 #include <algorithm>
 #include <string>
-#include <iostream>
 
 // caffe headers
 #include "caffe/util/classifier.hpp"
@@ -224,18 +223,49 @@ void Classifier::Preprocess(const cv::Mat& img,
     << "Input channels are not wrapping the input layer of the network.";
 }
 
-std::vector<string> Classifier::get_layer_names() {
+void Classifier::Preprocess(cv::Mat& img) {
+  /* Convert the input image to the input image format of the network. */
+  cv::Mat sample;
+  if (img.channels() == 3 && num_channels_ == 1)
+    cv::cvtColor(img, sample, cv::COLOR_BGR2GRAY);
+  else if (img.channels() == 4 && num_channels_ == 1)
+    cv::cvtColor(img, sample, cv::COLOR_BGRA2GRAY);
+  else if (img.channels() == 4 && num_channels_ == 3)
+    cv::cvtColor(img, sample, cv::COLOR_BGRA2BGR);
+  else if (img.channels() == 1 && num_channels_ == 3)
+    cv::cvtColor(img, sample, cv::COLOR_GRAY2BGR);
+  else
+    sample = img;
+
+  cv::Mat sample_resized;
+  if (sample.size() != input_geometry_)
+    cv::resize(sample, sample_resized, input_geometry_);
+  else
+    sample_resized = sample;
+
+  cv::Mat sample_float;
+  if (num_channels_ == 3)
+    sample_resized.convertTo(sample_float, CV_32FC3);
+  else
+    sample_resized.convertTo(sample_float, CV_32FC1);
+
+  cv::Mat sample_normalized;
+  cv::subtract(sample_float, mean_, sample_normalized);
+
+  img = sample_normalized;
+}
+
+std::vector<string> Classifier::get_layer_names() const {
 
   vector<string> layer_names = net_->layer_names();
 
+  // TODO: Maybe remove the prinnting
   for (size_t i = 0; i < layer_names.size(); ++i) {
     std::cout << layer_names[i] << std::endl;
   }
 
   return layer_names;
 }
-
-
 
 std::vector<float> Classifier::InputGradientofClassifier(const cv::Mat& img,
                                                          int k) {
@@ -279,6 +309,7 @@ std::vector<float> Classifier::InputGradientofClassifier(const cv::Mat& img,
 
   caffe_copy(output_layer->count(), &output_val[0], output_diff);
   */
+
   net_->Backward();
 
   Blob<float>* input_layer = net_->input_blobs()[0];

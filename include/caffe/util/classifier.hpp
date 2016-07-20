@@ -40,7 +40,12 @@ class Classifier {
   // returns the gradient w.r.t. the input of the k-th classifier
   std::vector<float> InputGradientofClassifier(const cv::Mat& img, int k = 0);
 
-  std::vector<string> get_layer_names();
+  std::vector<string> get_layer_names() const;
+  inline std::vector<string> get_labels() const { return labels_; }
+
+  inline cv::Size get_geometry() const { return input_geometry_; }
+
+  void Preprocess(cv::Mat& img);
 
  private:
   boost::shared_ptr<caffe::Net<float> > net_;
@@ -53,7 +58,6 @@ class Classifier {
   void SetMean(const std::string& mean_file);
 
   void WrapInputLayer(std::vector<cv::Mat>* input_channels);
-
   // preprocess the image
   void Preprocess(const cv::Mat& img,
                   std::vector<cv::Mat>* input_channels);

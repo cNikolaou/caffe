@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+#include <iomanip>
+
 #include <caffe/util/classifier.hpp>
 
 #ifdef USE_OPENCV
@@ -50,6 +52,22 @@ int main(int argc, char** argv) {
     std::cout << std::fixed << std::setprecision(4) << p.second << " - \""
               << p.first << "\"" << std::endl;
   }
+
+  std::cout << "Check the gradient of the classifier" << std::endl;
+  std::vector<float> grads = classifier.InputGradientofClassifier(img, 0);
+  for (int k = 0; k < grads.size(); ++k) {
+    std::cout << k << " " << grads[k] << std::endl;
+  }
+/*
+  std::cout << "M = " << std::endl << " " << img << std::endl << std::endl;
+  double min, max;
+  cv::minMaxLoc(img, &min, &max);
+  std::cout << "Mat min and max " << min << " " << max << std::endl;*/
+  std::cout << "Vector size: " << std::setprecision(8) << grads.size() << std::endl;
+  std::cout << "Max value: " << *(std::max_element(grads.begin(), grads.end())) << std::endl;
+  std::cout << "Min value: " << *(std::min_element(grads.begin(), grads.end())) << std::endl;
+
+
 }
 #else
 int main(int argc, char** argv) {
