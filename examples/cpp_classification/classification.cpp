@@ -42,30 +42,63 @@ int main(int argc, char** argv) {
   std::cout << "---------- Prediction for "
             << file << " ----------" << std::endl;
 
-  cv::Mat img = cv::imread(file, -1);
-  CHECK(!img.empty()) << "Unable to decode image " << file;
-  std::vector<Prediction> predictions = classifier.Classify(img, 5);
+  cv::Mat input_img = cv::imread(file, -1);
+  //cv::Mat input_img =
+  CHECK(!input_img.empty()) << "Unable to decode image " << file;
+
+  cv::Mat img_float;
+  input_img.convertTo(img_float, CV_32FC1);
+/*
+  std::vector<cv::Mat> img;
+  img.push_back(input_img2);
+  int tmp[] = {img.size(), img[0].channels(), img[0].rows, img[0].cols};
+  const std::vector<int> dimensions(tmp, tmp + 4);
+
+  std::cout << "The input image is: " << std::endl << img[0] << std::endl;
+
+  // TODO: Another alternative is to reshape the image matrx to a column ont
+  //       and then use matrix.col(0).copyTo(vec)
+  //       Or use http://stackoverflow.com/questions/14303073/using-matati-j-in-opencv-for-a-2-d-mat-object
+  int count = 0;
+  for (int n = 0; n < dimensions[0]; ++n) {
+    for (int c = 0; c < dimensions[1]; ++c) {
+      std::cout << std::endl << "Channel: " << c << std::endl;
+      for (int h = 0; h < dimensions[2]; ++h) {
+        std::cout << std::endl << "Column: " << h << std::endl;
+        for (int r = 0; r < dimensions[3]; ++r) {
+          std::cout << img[n].at<float>(h,r*3 + c) << " ";
+          count++;
+        }
+      }
+    }
+    std::cout << std::endl << "Counted " << count << " pixels" << std::endl;
+
+  }*/
+  /**/
+  classifier.Preprocess(img_float);
+  std::vector<Classifier::Prediction> predictions =
+        classifier.Classify(img_float, 5);
 
   /* Print the top N predictions. */
   for (size_t i = 0; i < predictions.size(); ++i) {
-    Prediction p = predictions[i];
+    Classifier::Prediction p = predictions[i];
     std::cout << std::fixed << std::setprecision(4) << p.second << " - \""
               << p.first << "\"" << std::endl;
   }
-
+/*
   std::cout << "Check the gradient of the classifier" << std::endl;
   std::vector<float> grads = classifier.InputGradientofClassifier(img, 0);
   for (int k = 0; k < grads.size(); ++k) {
     std::cout << k << " " << grads[k] << std::endl;
-  }
+  }*/
 /*
   std::cout << "M = " << std::endl << " " << img << std::endl << std::endl;
   double min, max;
   cv::minMaxLoc(img, &min, &max);
   std::cout << "Mat min and max " << min << " " << max << std::endl;*/
-  std::cout << "Vector size: " << std::setprecision(8) << grads.size() << std::endl;
-  std::cout << "Max value: " << *(std::max_element(grads.begin(), grads.end())) << std::endl;
-  std::cout << "Min value: " << *(std::min_element(grads.begin(), grads.end())) << std::endl;
+  //std::cout << "Vector size: " << std::setprecision(8) << grads.size() << std::endl;
+  //std::cout << "Max value: " << *(std::max_element(grads.begin(), grads.end())) << std::endl;
+  //std::cout << "Min value: " << *(std::min_element(grads.begin(), grads.end())) << std::endl;
 
 
 }
