@@ -1,3 +1,5 @@
+force_backward: true
+
 name: "CaffeNet"
 layer {
   name: "data"

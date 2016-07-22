@@ -168,6 +168,10 @@ void Classifier::Input(const std::vector<cv::Mat>& data) {
 
   float* input_data = input_layer->mutable_cpu_data();
 
+  // TODO: Another alternative is to reshape the image matrx to a column ont
+  //       and then use matrix.col(0).copyTo(vec)
+  //       Or use http://stackoverflow.com/questions/14303073/using-matati-j-in-opencv-for-a-2-d-mat-object
+
   for (int n = 0; n < dimensions[0]; ++n) {
     for (int k = 0; k < dimensions[1]; ++k) { //channel
       for (int h = 0; h < dimensions[2]; ++h) {
@@ -253,7 +257,7 @@ void Classifier::SetMean(const string& mean_file) {
  * don't need to rely on cudaMemcpy2D. The last preprocessing
  * operation will write the separate channels directly to the input
  * layer.
- * TODO: Old code; not used - use the cvMat2Blob instead; maybe remove?
+ * TODO: Old code; not used - use the Input instead; maybe remove?
  */
 void Classifier::WrapInputLayer(std::vector<cv::Mat>* input_channels) {
   Blob<float>* input_layer = net_->input_blobs()[0];

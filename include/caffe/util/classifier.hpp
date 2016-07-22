@@ -136,7 +136,7 @@ class Classifier {
                   std::vector<cv::Mat>* input_channels);
 
   void Input(const std::vector<cv::Mat>& data);
-  void Impur(const Blob<float>* data);
+  void Input(const Blob<float>* data);
 };
 
 } // namespace Caffe
