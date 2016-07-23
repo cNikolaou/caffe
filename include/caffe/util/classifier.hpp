@@ -76,22 +76,28 @@ class Classifier {
    *
    * TODO: Add more detailed description
    */
-  std::vector<float> InputGradientofClassifier(const std::vector<cv::Mat>& img,
-                                               int k = 0);
+  std::vector<std::vector<float> >
+  InputGradientofClassifier(const std::vector<cv::Mat>& img, int k = 0);
+
+  std::vector<std::vector<float> >
+  InputGradientofClassifier(const cv::Mat& img, int k =0);
 
   /**
-   * @brief Preprocess the given cv::Mat image.
+   * @brief Preprocess the given cv::Mat image. If UINT8_TO_FLOAT32 has
+   *        value 'true' then the image will be transformed from a
+   *        OpenCV::UINT8 to an OpenCV::FLOAT32 representation.
    *
    * TODO: Add similar functionality for Blob images?
-   * TODO: Make it work with vector<cv::Mat>
    *
    */
-  void Preprocess(cv::Mat& img);
+  void Preprocess(cv::Mat& img, bool UINT8_TO_FLOAT32=false);
 
   /**
-    * @brief Preprocess a vector of cv::Mat images
+    * @brief Preprocess a vector of cv::Mat images. If UINT8_TO_FLOAT32 has
+    *        value 'true' then the image will be transformed from a
+    *        OpenCV::UINT8 to an OpenCV::FLOAT32 representation.
     */
-  void Preprocess(std::vector<cv::Mat>& data);
+  void Preprocess(std::vector<cv::Mat>& data, bool UINT8_TO_FLOAT32=false);
 
   /**
    * @brief Return the layer names of the defined network.

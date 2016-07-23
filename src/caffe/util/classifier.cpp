@@ -127,12 +127,7 @@ Classifier::Classify(const std::vector<cv::Mat>& img, int N) {
     std::vector<Prediction> tmp_vec;
     for (int i = 0; i < N; ++i) {
 
-      //std::cout << "Iteration: " << i << std::endl;
-      //std::cout << "maxN[" << j << "][" << i << "] = "
-      //          << maxN[j][i] <<  std::endl;
       int idx = maxN[j][i];
-      //std::cout << "label " << idx << " = " << labels_[idx] << std::endl;
-      //std::cout << "output " << output[j][idx] << std::endl;
       tmp_vec.push_back(std::make_pair(labels_[idx], output[j][idx]));
 
     }
@@ -152,6 +147,8 @@ Classifier::Classify(const cv::Mat& img, int N) {
   return Classify(img_mat, N);
 
 }
+
+
 /*
 // TODO: Define the function
 void Classifier::Input(const Blob<float>* data) {
@@ -168,6 +165,8 @@ void Classifier::Input(const Blob<float>* data) {
 
 }
 */
+
+// TODO: Change name to Import?
 void Classifier::Input(const std::vector<cv::Mat>& data) {
 
   // TODO: Make simpler names ? Maybe....
@@ -227,33 +226,27 @@ Classifier::Predict(const std::vector<cv::Mat>& img) {
   Blob<float>* output_layer = net_->output_blobs()[0];
 
   vector<int> output_shape = output_layer->shape();
-/*
-  std::cout << "output_shape: " << std::endl;
 
-  for (int i = 0; i < output_shape.size(); ++i) {
-    std::cout << output_shape[i] << " ";
-  }
-*/
   //std::cout << std::endl << "Channels: " << output_layer->channels() << std::endl;
   //std::cout << "Num: " << output_layer->num() << std::endl;
   int channels = output_layer->channels();
   const float* begin = output_layer->cpu_data();
 
   // Copy the output layer (the predictions) to a std::vector
-  for (size_t i = 0; i < img.size(); ++i) {
-    // copy the output of the i-th image to the return vector
-    const float* start = begin + i*channels;
+  for (size_t n = 0; n < img.size(); ++n) {
+    // copy the output of the n-th image to the return vector
+    const float* start = begin + n*channels;
     const float* end = start + channels;
     std::vector<float> tmp(start, end);
     //std::cout << "Vector size: " << tmp.size() << std::endl;
     output.push_back(tmp);
   }
 
-  std::cout << "P out" << std::endl;
   return output;
 }
 
 /*
+// TODO: Maybe define the function?
 std::vector<float> Classifier::Predict(const Blob<float>* data) {
 
   // Reminder:
@@ -269,8 +262,8 @@ std::vector<float> Classifier::Predict(const Blob<float>* data) {
   return std::vector<float>(begin,end);
 }
 */
-/* UNCHANGED CODE */
-/* Load the mean file in binaryproto format. */
+// UNCHANGED CODE
+// Load the mean file in binaryproto format.
 void Classifier::SetMean(const string& mean_file) {
   BlobProto blob_proto;
   ReadProtoFromBinaryFileOrDie(mean_file.c_str(), &blob_proto);
@@ -306,7 +299,7 @@ void Classifier::SetMean(const string& mean_file) {
  * don't need to rely on cudaMemcpy2D. The last preprocessing
  * operation will write the separate channels directly to the input
  * layer.
- * TODO: Old code; not used - use the Input instead; maybe remove?
+ * TODO: Old code; not used - use the Input() instead; maybe remove?
  */
 void Classifier::WrapInputLayer(std::vector<cv::Mat>* input_channels) {
   Blob<float>* input_layer = net_->input_blobs()[0];
@@ -321,6 +314,7 @@ void Classifier::WrapInputLayer(std::vector<cv::Mat>* input_channels) {
   }
 }
 
+// TODO: Old code; not used - use the Input() instead; maybe remove?
 void Classifier::Preprocess(const cv::Mat& img,
                             std::vector<cv::Mat>* input_channels) {
   /* Convert the input image to the input image format of the network. */
@@ -363,8 +357,8 @@ void Classifier::Preprocess(const cv::Mat& img,
 
 // Preprocess the given image. This function is used before calling
 // the classifier at the preprocessing step
-void Classifier::Preprocess(cv::Mat& img) {
-  /* Convert the input image to the input image format of the network. */
+void Classifier::Preprocess(cv::Mat& img, bool UINT8_TO_FLOAT32) {
+  // Convert the input image to the input image format of the network.
   cv::Mat sample;
   if (img.channels() == 3 && num_channels_ == 1)
     cv::cvtColor(img, sample, cv::COLOR_BGR2GRAY);
@@ -384,42 +378,52 @@ void Classifier::Preprocess(cv::Mat& img) {
     sample_resized = sample;
 
   cv::Mat sample_float;
-  if (num_channels_ == 3)
-    sample_resized.convertTo(sample_float, CV_32FC3);
-  else
-    sample_resized.convertTo(sample_float, CV_32FC1);
 
-  // TODO: Find out whats happening and simplify the code
+  // transforme the image from UINT8 to FLOAT32 when
+  // specified by the flag argument
+  if (UINT8_TO_FLOAT32) {
+    if (num_channels_ == 3)
+      sample_resized.convertTo(sample_float, CV_32FC3);
+    else
+      sample_resized.convertTo(sample_float, CV_32FC1);
+  } else {
+    sample_float = sample_resized;
+  }
+
+  // subtract the mean value
   cv::Mat sample_normalized;
   cv::subtract(sample_float, mean_, sample_normalized);
 
   img = sample_normalized;
 }
 
-void Classifier::Preprocess(std::vector<cv::Mat>& data) {
+void Classifier::Preprocess(std::vector<cv::Mat>& data,
+                            bool UINT8_TO_FLOAT32) {
 
   for (size_t i = 0; i < data.size(); ++i) {
-    Preprocess(data[i]);
+    Preprocess(data[i], UINT8_TO_FLOAT32);
   }
 
 }
 
 
-std::vector<float>
+std::vector<std::vector<float> >
 Classifier::InputGradientofClassifier(const std::vector<cv::Mat>& img, int k) {
 
-  Blob<float>* input_layer_1 = net_->input_blobs()[0];
-  input_layer_1->Reshape(1, num_channels_,
-                       input_geometry_.height, input_geometry_.width);
-  net_->Reshape();
+  Blob<float>* input_layer = net_->input_blobs()[0];
 
-  std::vector<cv::Mat> input_channels;
+  // Check if the network has already been reshaped to represent
+  // the data otherwise import the data and  perform a forward pass.
+  // Instead of calling the Classify() or the Predict() function,
+  // this process uses fewer resources as we don't need the predictions.
+  if (input_layer->num() != img.size()) {
 
-  WrapInputLayer(&input_channels);
+    // Import images to the network and perform a forward pass
+    Input(img);
+    net_->Forward();
 
-  //Preprocess(img, &input_channels);
-
-  net_->Forward();
+  } // else the network has already been used for those images?
+  // TODO: NOT ALWAYS THE CASE; find a better way to test it?
 
   CHECK(k < labels_.size()) << "The classifier can discriminate "
       << "over fewer classes";
@@ -427,13 +431,21 @@ Classifier::InputGradientofClassifier(const std::vector<cv::Mat>& img, int k) {
   Blob<float>* output_layer = net_->output_blobs()[0];
   float* output_diff = output_layer->mutable_cpu_diff();
 
-
-  for (int i = 0; i < output_layer->count(); ++i) {
-    output_diff[i] = 0;
+  // TODO: Maybe optimize to set all values to zero in one line?
+  for (size_t i = 0; i < output_layer->count(); ++i) {
+      output_diff[i] = 0;
   }
-  output_diff[k] = 1;
 
-  /* The following does the same thing as the last 4 lines
+  int output_channels = output_layer->channels();
+
+  for (size_t n = 0; n < img.size(); ++n) {
+    output_diff[k + n*output_channels] = 1;
+  }
+
+
+  /*
+  // The following does the same thing as the last 4 lines
+  // (maybe older version)
   // NOTE: Maybe use blob->count as a constructor initializer
   // NOTE: It might be better to intialize an array but vectors
   //       should act like arrays if we pass them as &vec[0]
@@ -449,10 +461,34 @@ Classifier::InputGradientofClassifier(const std::vector<cv::Mat>& img, int k) {
 
   net_->Backward();
 
-  Blob<float>* input_layer = net_->input_blobs()[0];
+  std::vector<std::vector<float> > input_grad;
+
+  int image_size =
+      input_layer->channels() * input_layer->height() * input_layer->width();
+
   const float* begin = input_layer->cpu_diff();
-  const float* end = begin + input_layer->count();
-  return std::vector<float>(begin, end);
+
+  for (size_t n = 0; n < img.size(); ++n) {
+
+    const float* start = begin + n*image_size;
+    const float* end = start + image_size;
+    std::vector<float> tmp(start, end);
+    input_grad.push_back(tmp);
+
+  }
+
+  return input_grad;
+}
+
+std::vector<std::vector<float> >
+Classifier::InputGradientofClassifier(const cv::Mat& img, int k) {
+
+  std::cout << "First Grad" << std::endl;
+  // TODO: Do it in one line?
+  std::vector<cv::Mat> img_mat;
+  img_mat.push_back(img);
+
+  return InputGradientofClassifier(img_mat, k);
 }
 
 } // namespace caffe
