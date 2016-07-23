@@ -100,32 +100,55 @@ static std::vector<int> Argmax(const std::vector<float>& v, int N) {
 
 // method that classifies the image img and returns a vector with the
 // top-N labels and their output (probibilites - if it is a softmax loss)
-std::vector<Classifier::Prediction>
+std::vector<std::vector<Classifier::Prediction> >
 Classifier::Classify(const std::vector<cv::Mat>& img, int N) {
 
   // return a vector with the probibilites predicted for each class
-  std::vector<float> output = Predict(img);
+  std::vector<std::vector<float> > output = Predict(img);
 
   // check that the user did not asked for more labels than
   // the amount provided by the dataset
   N = std::min<int>(labels_.size(), N);
+
   // return the indexes of the N labels with the max probabilities
-  std::vector<int> maxN = Argmax(output, N);
-  std::vector<Prediction> predictions;
-  for (int i = 0; i < N; ++i) {
-    int idx = maxN[i];
-    predictions.push_back(std::make_pair(labels_[idx], output[idx]));
+  // TODO: Unwrap loop (by changing the Argmax function)?
+  std::vector<std::vector<int> > maxN;
+  //maxN.reserve(output.size());
+
+  for (size_t i = 0; i < output.size(); ++i) {
+
+    maxN.push_back(Argmax(output[i], N));
+
+  }
+
+  std::vector<std::vector<Prediction> > predictions;
+
+  for (size_t j = 0; j < maxN.size(); ++j) {
+    std::vector<Prediction> tmp_vec;
+    for (int i = 0; i < N; ++i) {
+
+      //std::cout << "Iteration: " << i << std::endl;
+      //std::cout << "maxN[" << j << "][" << i << "] = "
+      //          << maxN[j][i] <<  std::endl;
+      int idx = maxN[j][i];
+      //std::cout << "label " << idx << " = " << labels_[idx] << std::endl;
+      //std::cout << "output " << output[j][idx] << std::endl;
+      tmp_vec.push_back(std::make_pair(labels_[idx], output[j][idx]));
+
+    }
+    predictions.push_back(tmp_vec);
   }
 
   return predictions;
 }
 
-std::vector<Classifier::Prediction>
+std::vector<std::vector<Classifier::Prediction> >
 Classifier::Classify(const cv::Mat& img, int N) {
 
   // TODO: Do it in one line?
   std::vector<cv::Mat> img_mat;
   img_mat.push_back(img);
+
   return Classify(img_mat, N);
 
 }
@@ -187,8 +210,10 @@ void Classifier::Input(const std::vector<cv::Mat>& data) {
 }
 
 // returns a vector of the probabilities of the predicted class labels
-std::vector<float> Classifier::Predict(const std::vector<cv::Mat>& img) {
+std::vector<std::vector<float> >
+Classifier::Predict(const std::vector<cv::Mat>& img) {
 
+  std::cout << "Predict" << std::endl;
   // Reminder:
   // Preprocess before calling this function
 
@@ -197,11 +222,35 @@ std::vector<float> Classifier::Predict(const std::vector<cv::Mat>& img) {
 
   net_->Forward();
 
-  // Copy the output layer (the predictions) to a std::vector
+  std::vector<std::vector<float> > output;
+
   Blob<float>* output_layer = net_->output_blobs()[0];
+
+  vector<int> output_shape = output_layer->shape();
+/*
+  std::cout << "output_shape: " << std::endl;
+
+  for (int i = 0; i < output_shape.size(); ++i) {
+    std::cout << output_shape[i] << " ";
+  }
+*/
+  //std::cout << std::endl << "Channels: " << output_layer->channels() << std::endl;
+  //std::cout << "Num: " << output_layer->num() << std::endl;
+  int channels = output_layer->channels();
   const float* begin = output_layer->cpu_data();
-  const float* end = begin + output_layer->channels();
-  return std::vector<float>(begin,end);
+
+  // Copy the output layer (the predictions) to a std::vector
+  for (size_t i = 0; i < img.size(); ++i) {
+    // copy the output of the i-th image to the return vector
+    const float* start = begin + i*channels;
+    const float* end = start + channels;
+    std::vector<float> tmp(start, end);
+    //std::cout << "Vector size: " << tmp.size() << std::endl;
+    output.push_back(tmp);
+  }
+
+  std::cout << "P out" << std::endl;
+  return output;
 }
 
 /*

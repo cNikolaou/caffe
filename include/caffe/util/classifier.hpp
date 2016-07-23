@@ -51,7 +51,7 @@ class Classifier {
   /**
    *  @brief Classify a cv::Mat object
    */
-  std::vector<Prediction> Classify(const cv::Mat& img, int N = 5);
+  std::vector<std::vector<Prediction> > Classify(const cv::Mat& img, int N = 5);
 
   /**
    * @brief Classify the image and return the top-N labels alongside their
@@ -59,7 +59,8 @@ class Classifier {
    *
    * TODO: Make it work with a vector<cv::Mat>
    */
-  std::vector<Prediction> Classify(const std::vector<cv::Mat>& img, int N = 5);
+  std::vector<std::vector<Prediction> >
+  Classify(const std::vector<cv::Mat>& img, int N = 5);
 
   /**
    * @brief Get the netwok's output (predictions) given the img image file;
@@ -68,7 +69,7 @@ class Classifier {
    *
    * TODO: Make it work with a vector<cv::Mat>
    */
-  std::vector<float> Predict(const std::vector<cv::Mat>& img);
+  std::vector<std::vector<float> > Predict(const std::vector<cv::Mat>& img);
 
   /**
    * @brief Get the gradient with respect to the input of the k-th classifier

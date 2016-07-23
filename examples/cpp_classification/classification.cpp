@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
       << "was given.";
 
   // vector to get the predictions from the classifier
-  std::vector<Classifier::Prediction> predictions;
+  std::vector<std::vector<Classifier::Prediction> > predictions;
 
   if (file_or_dir[file_or_dir.size() - 1] == '/') {
     std::cout << "----- Predicting for images contained in "
@@ -135,12 +135,16 @@ int main(int argc, char** argv) {
               << "name or a directory path that containes images.";
   }
 
-
+  std::cout << "Reach" << std::endl;
   /* Print the top N predictions. */
   for (size_t i = 0; i < predictions.size(); ++i) {
-    Classifier::Prediction p = predictions[i];
-    std::cout << std::fixed << std::setprecision(4) << p.second << " - \""
-              << p.first << "\"" << std::endl;
+    std::cout << "Output for: " << i << " image." << std::endl;
+
+    for (size_t j = 0; j < predictions[0].size(); ++j) {
+      Classifier::Prediction p = predictions[i][j];
+      std::cout << std::fixed << std::setprecision(4) << p.second << " - \""
+                << p.first << "\"" << std::endl;
+    }
   }
 
 /*
