@@ -175,7 +175,7 @@ void Classifier::Input(const std::vector<cv::Mat>& data) {
   // vector<int> vec = { ... }
   int tmp_dim[] = {data.size(), data[0].channels(), data[0].rows, data[0].cols};
   const vector<int> dimensions(tmp_dim, tmp_dim + 4);
-  std::cout << "Input dimensions to be: " << dimensions[0] << " "
+  std::cout << "Input dimensions will be: " << dimensions[0] << " "
       << dimensions[1] << " " << dimensions[2] << " "
       << dimensions[3] << std::endl;
   Blob<float>* input_layer = net_->input_blobs()[0];
@@ -194,10 +194,10 @@ void Classifier::Input(const std::vector<cv::Mat>& data) {
   //       and then use matrix.col(0).copyTo(vec)
   //       Or use http://stackoverflow.com/questions/14303073/using-matati-j-in-opencv-for-a-2-d-mat-object
 
-  for (int n = 0; n < dimensions[0]; ++n) {
-    for (int k = 0; k < dimensions[1]; ++k) { //channel
-      for (int h = 0; h < dimensions[2]; ++h) {
-        for (int w = 0; w < dimensions[3]; ++w) {
+  for (size_t n = 0; n < dimensions[0]; ++n) {
+    for (size_t k = 0; k < dimensions[1]; ++k) { //channel
+      for (size_t h = 0; h < dimensions[2]; ++h) {
+        for (size_t w = 0; w < dimensions[3]; ++w) {
 
           input_data[((n*K + k)*H + h)*W + w] =
                 data[n].at<float>(h, w * 3 + k);
@@ -208,16 +208,59 @@ void Classifier::Input(const std::vector<cv::Mat>& data) {
   }
 }
 
+void Classifier::ImportData(const std::vector<cv::Mat>& data) {
+
+  // dimension: number of image data, number of channels, height, width
+  int dimensions[]
+            = { data.size(), data[0].channels(), data[0].rows, data[0].cols };
+
+  std::cout << "Input dimensions will be: " << dimensions[0] << " "
+      << dimensions[1] << " " << dimensions[2] << " "
+      << dimensions[3] << std::endl;
+
+  Blob<float>* input_layer = net_->input_blobs()[0];
+  input_layer->Reshape(dimensions[0], dimensions[1],
+                       dimensions[2], dimensions[3]);
+
+  net_->Reshape();
+
+  float* input_data = input_layer->mutable_cpu_data();
+
+  int K = dimensions[1];
+  int H = dimensions[2];
+  int W = dimensions[3];
+
+  for (size_t n = 0; n < dimensions[0]; ++n) {
+    CHECK(data[n].type() == CV_32FC3)
+        << "Image data should be in CV_32FC3 format";
+
+    for (size_t h = 0; h < dimensions[2]; ++h) {
+
+      const float* img = data[n].ptr<float>(h);
+
+      for (size_t w = 0; w < dimensions[3]; ++w) {
+
+        for (size_t k = 0; k < dimensions[1]; ++k) {
+
+          input_data[((n*K + k)*H + h)*W + w] = img[w*K + k];
+
+        }
+      }
+    }
+  }
+}
+
+
 // returns a vector of the probabilities of the predicted class labels
 std::vector<std::vector<float> >
 Classifier::Predict(const std::vector<cv::Mat>& img) {
 
-  std::cout << "Predict" << std::endl;
   // Reminder:
   // Preprocess before calling this function
 
   // Set the Blob of the input layer equal to the data in img
-  Input(img);
+  //Input(img);
+  ImportData(img);
 
   net_->Forward();
 
@@ -243,6 +286,15 @@ Classifier::Predict(const std::vector<cv::Mat>& img) {
   }
 
   return output;
+}
+
+vector<vector<float> >
+Classifier::Predict(const cv::Mat& img) {
+
+  std::vector<cv::Mat> vec;
+  vec.push_back(img);
+
+  return Predict(vec);
 }
 
 /*
@@ -314,7 +366,7 @@ void Classifier::WrapInputLayer(std::vector<cv::Mat>* input_channels) {
   }
 }
 
-// TODO: Old code; not used - use the Input() instead; maybe remove?
+// TODO: Old code; not used - use the other Preprocess() instead; maybe remove?
 void Classifier::Preprocess(const cv::Mat& img,
                             std::vector<cv::Mat>* input_channels) {
   /* Convert the input image to the input image format of the network. */
@@ -368,25 +420,34 @@ void Classifier::Preprocess(cv::Mat& img, bool UINT8_TO_FLOAT32) {
     cv::cvtColor(img, sample, cv::COLOR_BGRA2BGR);
   else if (img.channels() == 1 && num_channels_ == 3)
     cv::cvtColor(img, sample, cv::COLOR_GRAY2BGR);
-  else
+  else {
+    std::cout << "Else" << std::endl;
     sample = img;
+  }
 
   cv::Mat sample_resized;
-  if (sample.size() != input_geometry_)
+  if (sample.size() != input_geometry_) {
     cv::resize(sample, sample_resized, input_geometry_);
-  else
+    std::cout << "Resized" << std::endl;
+    std::cout << "New size: " << sample_resized.rows << " x " << sample_resized.cols << std::endl;
+  }
+  else {
     sample_resized = sample;
+    std::cout << "Not resized" << std::endl;
+  }
 
   cv::Mat sample_float;
 
   // transforme the image from UINT8 to FLOAT32 when
   // specified by the flag argument
   if (UINT8_TO_FLOAT32) {
+    std::cout << "Change to FLOAT32" << std::endl;
     if (num_channels_ == 3)
       sample_resized.convertTo(sample_float, CV_32FC3);
     else
       sample_resized.convertTo(sample_float, CV_32FC1);
   } else {
+    std::cout << "NOT CHANGE TO float32" << std::endl;
     sample_float = sample_resized;
   }
 
@@ -419,7 +480,8 @@ Classifier::InputGradientofClassifier(const std::vector<cv::Mat>& img, int k) {
   if (input_layer->num() != img.size()) {
 
     // Import images to the network and perform a forward pass
-    Input(img);
+    //Input(img);
+    ImportData(img);
     net_->Forward();
 
   } // else the network has already been used for those images?
@@ -467,7 +529,7 @@ Classifier::InputGradientofClassifier(const std::vector<cv::Mat>& img, int k) {
       input_layer->channels() * input_layer->height() * input_layer->width();
 
   const float* begin = input_layer->cpu_diff();
-
+/*
   for (size_t n = 0; n < img.size(); ++n) {
 
     const float* start = begin + n*image_size;
@@ -476,6 +538,30 @@ Classifier::InputGradientofClassifier(const std::vector<cv::Mat>& img, int k) {
     input_grad.push_back(tmp);
 
   }
+*/
+
+  size_t H = input_layer->shape(2);
+  size_t W = input_layer->shape(3);
+
+  for (size_t n = 0; n < input_layer->shape(0); ++n) {
+
+    std::vector<float> tmp;
+    const float* start = begin + n*image_size;
+
+    for (size_t h = 0; h < H; ++h) {
+
+      for (size_t w = 0; w < W; ++w) {
+
+        for (size_t k = 0; k < input_layer->shape(1); ++k) {
+
+          tmp.push_back(*(start + k*W*H + h*W + w));
+
+        }
+      }
+    }
+
+    input_grad.push_back(tmp);
+  }
 
   return input_grad;
 }
@@ -483,12 +569,104 @@ Classifier::InputGradientofClassifier(const std::vector<cv::Mat>& img, int k) {
 std::vector<std::vector<float> >
 Classifier::InputGradientofClassifier(const cv::Mat& img, int k) {
 
-  std::cout << "First Grad" << std::endl;
+  // TODO: REMOVE Just for testing
+  if (k%100 == 0) {
+    std::cout << "First Grad; classifier " << k << std::endl;
+  }
+
   // TODO: Do it in one line?
   std::vector<cv::Mat> img_mat;
   img_mat.push_back(img);
 
   return InputGradientofClassifier(img_mat, k);
+}
+
+// related functions
+// function that reads the UINT8 image_file image and converts it to
+// a FLOAT32 image
+cv::Mat read_image(std::string image_file) {
+
+  // read image
+  cv::Mat tmp_img = cv::imread(image_file, -1);
+  CHECK(!tmp_img.empty()) << "Unable to decode image " << image_file;
+
+  // convert a UINT8 image to a FLOAT32 image
+  cv::Mat input_img;
+  tmp_img.convertTo(input_img, CV_32FC3);
+
+  return input_img;
+
+}
+
+// function that reads a set of images that are contained in the
+// dir_name directory and returns a vector of the images
+std::vector<cv::Mat> read_images_from_dir(std::string dir_name) {
+
+  std::vector<cv::Mat> image_vec;
+
+  /**
+   * Simple solution; the glob() function is missing from the current
+   * opencv library. Use the boost::filesystem (which might be heavy?).
+   *
+   * TODO: Update OpenCV so that it contains the cv::glob() function.
+   *
+  std::vector<std::string> image_file_names;
+  cv::glob(dir_name, image_file_names);
+
+  for (size_t i = 0; i < image_file_names.size(); ++i) {
+
+    image_vec.push_back(read_image(image_file_names[i]));
+
+  }
+   */
+
+  boost::filesystem::path p(dir_name);
+
+  std::vector<boost::filesystem::path> tmp_vec;
+
+  std::copy(boost::filesystem::directory_iterator(p),
+            boost::filesystem::directory_iterator(),
+            back_inserter(tmp_vec));
+
+  std::vector<boost::filesystem::path>::const_iterator it = tmp_vec.begin();
+
+  for (; it != tmp_vec.end(); ++it) {
+
+    if (is_regular_file(*it)) {
+      //std::cout << it->string() << std::endl;
+      image_vec.push_back(read_image(it->string()));
+    }
+
+  }
+
+  return image_vec;
+}
+
+
+std::vector<std::string> read_names_from_dir(std::string dir_name) {
+
+  std::vector<std::string> name_vec;
+
+  boost::filesystem::path p(dir_name);
+
+  std::vector<boost::filesystem::path> tmp_vec;
+
+  std::copy(boost::filesystem::directory_iterator(p),
+            boost::filesystem::directory_iterator(),
+            back_inserter(tmp_vec));
+
+  std::vector<boost::filesystem::path>::const_iterator it = tmp_vec.begin();
+
+  for (; it != tmp_vec.end(); ++it) {
+
+    if (is_regular_file(*it)) {
+      //std::cout << it->string() << std::endl;
+      name_vec.push_back(it->filename().string());
+    }
+
+  }
+
+  return name_vec;
 }
 
 } // namespace caffe

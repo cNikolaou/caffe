@@ -40,27 +40,29 @@ class Classifier {
    *
    * TODO: IMPLEMENT IT -- maybe change the other Classify function
    */
-  std::vector<Prediction> Classify(const Blob<float>* data, int N = 5);
+  std::vector<std::vector<Prediction> >
+  Classify(const Blob<float>* data, int N = 5);
+
+  /**
+   *  @brief Classify a cv::Mat object
+   */
+  std::vector<std::vector<Prediction> >
+  Classify(const cv::Mat& img, int N = 5);
+
+  /**
+    * @brief Classify the image and return the top-N labels alongside their
+    *        predictions (or the network's output, in general).
+    *
+    * TODO: Make it work with a vector<cv::Mat>
+    */
+  std::vector<std::vector<Prediction> >
+  Classify(const std::vector<cv::Mat>& img, int N = 5);
 
   /**
    * @brief Get the network's output (predictions) given a blob that contains
    *        the data.
    */
   std::vector<float> Predict(const Blob<float>* data);
-
-  /**
-   *  @brief Classify a cv::Mat object
-   */
-  std::vector<std::vector<Prediction> > Classify(const cv::Mat& img, int N = 5);
-
-  /**
-   * @brief Classify the image and return the top-N labels alongside their
-   *        predictions (or the network's output, in general).
-   *
-   * TODO: Make it work with a vector<cv::Mat>
-   */
-  std::vector<std::vector<Prediction> >
-  Classify(const std::vector<cv::Mat>& img, int N = 5);
 
   /**
    * @brief Get the netwok's output (predictions) given the img image file;
@@ -70,6 +72,9 @@ class Classifier {
    * TODO: Make it work with a vector<cv::Mat>
    */
   std::vector<std::vector<float> > Predict(const std::vector<cv::Mat>& img);
+
+  std::vector<std::vector<float> > Predict(const cv::Mat& img);
+
 
   /**
    * @brief Get the gradient with respect to the input of the k-th classifier
@@ -118,6 +123,18 @@ class Classifier {
    */
   inline cv::Size get_geometry() const { return input_geometry_; }
 
+  // TODO: Just a testing function -- REMOVE
+  float print_mean_file(int i, int j) {
+    return mean_.at<float>(i,j);
+  }
+
+  // TODO: Just a testing function -- REMOVE
+  void save_mean_as_image() {
+    cv::imwrite("mean_image.jpeg", mean_);
+  }
+
+  inline cv::Mat get_mean() const { return mean_; }
+
  private:
   // pointer for the underlaying network
   boost::shared_ptr<caffe::Net<float> > net_;
@@ -144,7 +161,14 @@ class Classifier {
 
   void Input(const std::vector<cv::Mat>& data);
   void Input(const Blob<float>* data);
+
+  void ImportData(const std::vector<cv::Mat>& data);
 };
+
+// related functions for reading images from the directory
+cv::Mat read_image(std::string image_file);
+std::vector<cv::Mat> read_images_from_dir(std::string dir_name);
+std::vector<std::string> read_names_from_dir(std::string dir_name);
 
 } // namespace Caffe
 
