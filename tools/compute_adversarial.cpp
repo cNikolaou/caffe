@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
   // leaving only the other arguments
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  // TODO: Maybe needs removal - sanity check
+  // TODO: REMOVE this - sanity check
   LOG(INFO) << "Just to check the number of the arguments: " << argc;
 
   // Check whether the number of arguments is the required one
@@ -112,14 +112,14 @@ int main(int argc, char** argv) {
   CHECK_GT(FLAGS_images.size(), 0) << "Need a dataset to compute the "
       << "adversarial perturbations";
 
-  // TODO: Maybe needs removal
+  // TODO: Maybe REMOVE this
   LOG(INFO) << "The image files are contained in the " << FLAGS_images
       << " folder";
 
   // TODO: Maybe the Caffe::CPU is not needed here.
   // It was here from the older code
-  LOG(INFO) << "Use CPU.";
-  Caffe::set_mode(Caffe::CPU);
+  //LOG(INFO) << "Use CPU.";
+  //Caffe::set_mode(Caffe::CPU);
 
 
   // Create and initialize the classifier which will be used
@@ -127,6 +127,7 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Classifier defining...";
 
   FLAGS_logtostderr = 0; // disable log to stderr to have a cleaner output
+
 /*
   Classifier classifier(FLAGS_model, FLAGS_weights,
                         FLAGS_mean_file, FLAGS_labels_file);
@@ -145,14 +146,14 @@ int main(int argc, char** argv) {
   Classifier cl(FLAGS_model, FLAGS_weights, FLAGS_mean_file, FLAGS_labels_file);
 
 
-  //std::cout << img << std::endl;
+  // TODO: REMOVE the code; it is used only for checking purposes
 
   double min, max;
 
   // TODO: Solve problem with reading and writting
   std::cout << "--- Start: --- " << std::endl;
   std::cout << "Cols x Rows before: " << img.rows << " x " << img.cols << std::endl;
-  std::cout << "Vals: " << img.at<float>(0,0) << " " << img.at<float>(100,100) << std::endl;
+  std::cout << "Vals: " << (int) img.at<uchar>(0,0) << " " << (int) img.at<uchar>(100,100) << std::endl;
   cv::minMaxLoc(img, &min, &max);
   std::cout << "Before permute: min and max " << min << " " << max << std::endl << std::endl;
   save_image(img, "Start_image.jpeg");
@@ -161,7 +162,7 @@ int main(int argc, char** argv) {
   cv::transpose(img, im2);
   std::cout << "--- Permute: --- " << std::endl;
   std::cout << "Cols x Rows after: " << im2.rows << " x " << im2.cols << std::endl;
-  std::cout << "Vals: " << im2.at<float>(0,0) << " " << im2.at<float>(100,100) << std::endl;
+  std::cout << "Vals: " << (int) im2.at<unsigned char>(0,0) << " " << (int) im2.at<uchar>(100,100) << std::endl;
   cv::minMaxLoc(im2, &min, &max);
   std::cout << "Before preprocess (after permute): min and max " << min << " " << max << std::endl << std::endl;
   save_image(im2, "Permuted_image.jpeg");
@@ -194,7 +195,7 @@ int main(int argc, char** argv) {
   df.adversarial(img);
 
   LOG(INFO) << "Adversarial Found";
-  // compute perturbation by callin the appropriate function
+  // compute perturbation by calling the appropriate function
   // call compute_perturbation(images,network)
   //compute_perturbation(classifier, FLAGS_images);
 

@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 
     cv::Mat input_img = read_image(file_or_dir);
 
-    classifier.Preprocess(input_img, false);
+    classifier.Preprocess(input_img);
     predictions = classifier.Classify(input_img, 5);
 
     grads = classifier.InputGradientofClassifier(input_img, 0);
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
               << "name or a directory path that containes images.";
   }
 
-  /* Print the top N predictions. */
+  // Print the top N predictions.
   for (size_t i = 0; i < predictions.size(); ++i) {
     std::cout << "Output for: " << image_names[i] << " image." << std::endl;
 

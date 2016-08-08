@@ -7,6 +7,7 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include <caffe/util/math_functions.hpp>
 #include <caffe/util/deepfool.hpp>
 #include <caffe/util/classifier.hpp>
 
@@ -20,12 +21,13 @@ namespace caffe{
                      const int MAX_ITER, const int Q,
                      const float OVERSHOOT)
               : classifier_(model_file, trained_file, mean_file, label_file) {
-    //classifier_(model_file, trained_file, mean_file, label_file);
+
     max_iterations_ = MAX_ITER;
     Q_ = Q;
     overshoot_ = OVERSHOOT;
   }
 
+  // TODO: REMOVE this function; used only for verification
   void print_vector(const vector<float> vec, size_t init = 0, size_t sz = 30) {
 
     for (size_t i = init; i != sz; ++i) {
@@ -38,39 +40,24 @@ namespace caffe{
 
   }
 
-  int get_top_classifier(const string& top_label,
-                         const vector<string>& labels) {
-
-    vector<string>::const_iterator label_idx =
-                                find(labels.begin(), labels.end(), top_label);
-
-    /*
-      std::cout << "first size: " << first.size() << "   second size: "
-                << second.size() << std::endl;
-    */
-    CHECK(label_idx != labels.end()) << "(DeepFool) The label was not found";
-
-    // find the top classifier
-    return label_idx - labels.begin();
-
-  }
-
-  // TODO: better naming
-  int Argmin(const vector<float>& f_p, const vector<float>& w_pn) {
+  // TODO: better naming? or change functionality?
+  size_t Argmin(const vector<float>& f_p, const vector<float>& w_pn) {
 
     CHECK(f_p.size() == w_pn.size()) << "(ArgMin) different vector dimensions";
+
     vector<float> tmp;
     for (size_t i = 0; i < f_p.size(); ++i) {
       tmp.push_back(abs(f_p[i]) / w_pn[i]);
     }
 
-    print_vector(tmp, 200, 400);
+    std::cout << "Argmin" << std::endl;
+    print_vector(tmp, 200, 700);
 
     vector<float>::const_iterator min_value = min_element(tmp.begin(), tmp.end());
 
     CHECK(min_value != tmp.end()) << "(ArgMin) no minimum value; should not occur";
 
-    int ret = min_value - tmp.begin(); //size_t typedef
+    size_t ret = min_value - tmp.begin();
 
     return ret;
 
@@ -92,7 +79,7 @@ namespace caffe{
     return result;
   }
 
-  // TODO: naming; not actually the norm; move sqrt here?
+  // TODO: maybe use BLAS for computation?
   float vector_norm(const vector<float>& v) {
 
     //return std::sqrt(std::inner_product(v.begin(), v.end(), v.begin(), 0.0));
@@ -105,7 +92,8 @@ namespace caffe{
     return sqrt(sum);
   }
 
-  // TODO: Remove this function
+
+  // TODO: REMOVE this function
   void print_img_dim(const cv::Mat& image) {
 
     std::cout << image.dims << " dimensions and " << std::endl
@@ -115,7 +103,6 @@ namespace caffe{
   }
 
 
-
   void DeepFool::adversarial(cv::Mat image, bool PREPROCESSING) {
     // Most classifier_ member functions return vector<vector<float> >
     // objects. This algorithm operates on a single image so we use
@@ -123,49 +110,58 @@ namespace caffe{
     // the one in [0] position)
 
 
+    // in case the image has not been preprocessed
+    // before calling the member function
     if (PREPROCESSING) {
-      classifier_.Preprocess(image, true);
+      classifier_.Preprocess(image);
     }
-
-    // get the most probable prediction (label and
-    // output of the classifier)
-    Classifier::Prediction top_label_prob =
-                           classifier_.Classify(image, 1)[0][0];
 
     // get classifier's labels
     vector<string> labels = classifier_.get_labels();
 
-    int top_classifier_index = get_top_classifier(top_label_prob.first, labels);
+    // get the most probable prediction (label and
+    // output/probability of the classifier)
+    Classifier::Prediction top_label_prob =
+                           classifier_.Classify(image, 1)[0][0];
 
+    int top_classifier_index =
+                            classifier_.get_label_index(top_label_prob.first);
 
+    // vector that holds the values of the perturbation of each step
     vector<vector<float> > r;
 
+    // image that will change in each iteration by adding the perturbation
     cv::Mat x = image;
     int i = 0;
 
+    // TODO: REMOVE uneccesary std::cout-s
     std::cout << "Before while" << std::endl;
+
     while (top_label_prob.first == classifier_.Classify(x)[0][0].first &&
            i < max_iterations_) {
 
       // Just for testing puroses
-      // TODO: Remove
+      // TODO: REMOVE
       std::cout << "Get top classifier grad" << std::endl;
       std::cout << "True prediction: " << top_label_prob.second << std::endl;
       std::cout << "Current prediction: "
-                << classifier_.Classify(x)[0][0].second
-                << classifier_.Classify(x)[0][0].first << std::endl;
+                << classifier_.Classify(x)[0][0].second << "   "
+                << classifier_.Classify(x)[0][0].first << "   at position "
+                << classifier_.get_label_index(classifier_.Classify(x)[0][0].first) << std::endl;
       std::cout << "2nd best current prediction: "
-                << classifier_.Classify(x)[0][1].second
-                << classifier_.Classify(x)[0][1].first << std::endl;
+                << classifier_.Classify(x)[0][1].second << "   "
+                << classifier_.Classify(x)[0][1].first << "   at position "
+                << classifier_.get_label_index(classifier_.Classify(x)[0][1].first) << std::endl;
       std::cout << "3rd best current predition: "
-                << classifier_.Classify(x)[0][2].second
-                << classifier_.Classify(x)[0][2].first << std::endl;
+                << classifier_.Classify(x)[0][2].second << "   "
+                << classifier_.Classify(x)[0][2].first << "   at position "
+                << classifier_.get_label_index(classifier_.Classify(x)[0][2].first) << std::endl;
 
       // gradient of the top classifier
-      vector<float> top_classifier_grad =
+      vector<float> current_top_classifier_grad =
           classifier_.InputGradientofClassifier(x, top_classifier_index)[0];
 
-      //print_vector(top_classifier_grad, 100);
+      //print_vector(current_top_classifier_grad, 100);
 
       // The gradients and the output of each classifier
       // TODO: reserve to make the allocation faster?
@@ -180,20 +176,20 @@ namespace caffe{
       std::cout << "Before for" << std::endl;
       int j = 0;
       for (size_t k = 0; k < labels.size(); ++k) {
-
+//      for (size_t k = 200; k < 300; ++k) {
         if (labels[k] != top_label_prob.first) {
 
           vector<float> k_classifier_grad =
                         classifier_.InputGradientofClassifier(x, k)[0];
 
       //    print_vector(k_classifier_grad);
-          CHECK(k_classifier_grad.size() == top_classifier_grad.size())
+          CHECK(k_classifier_grad.size() == current_top_classifier_grad.size())
               << "The " << k << "-th classifier and the top classifier are "
               << "not of the same size.";
 
           // change subvec with a BLAS routine?
           w_prime.push_back(subtract_vec(k_classifier_grad,
-                                        top_classifier_grad));
+                                        current_top_classifier_grad));
 
           f_prime.push_back(predictions[k] - top_label_prob.second);
 
@@ -211,9 +207,9 @@ namespace caffe{
       LOG(INFO) << "After for. Before Argmin";
 
       std::cout << "Printing f_prime" << std::endl;
-      print_vector(f_prime, 200, 400);
+      print_vector(f_prime, 200, 700);
       std::cout << "Printing w_prime_norm" << std::endl;
-      print_vector(w_prime_norm, 200, 400);
+      print_vector(w_prime_norm, 200, 700);
 
       int l_hat = Argmin(f_prime, w_prime_norm);
 
@@ -255,9 +251,7 @@ namespace caffe{
     //  std::cout << "temp_x at iteration " << i << " has " << std::endl;
     //  print_img_dim(temp_x);
 
-      cv::Mat tmp_sum;
-      cv::add(x, r_image, tmp_sum);
-      x = tmp_sum;
+      x = x + (1 + overshoot_) * r_image;
 
       std::string name = "test_deepfool_x_" +
                           boost::lexical_cast<std::string>(i) + ".jpg";

@@ -38,13 +38,13 @@ class Classifier {
    *        and return the top-N labels alongside their predictions (or the
    *        network's output, in general).
    *
-   * TODO: IMPLEMENT IT -- maybe change the other Classify function
+   * TODO: IMPLEMENT IT -- maybe just change the other Classify function
    */
   std::vector<std::vector<Prediction> >
   Classify(const Blob<float>* data, int N = 5);
 
   /**
-   *  @brief Classify a cv::Mat object
+   *  @brief Classify a cv::Mat object and return the top-N labels
    */
   std::vector<std::vector<Prediction> >
   Classify(const cv::Mat& img, int N = 5);
@@ -53,7 +53,6 @@ class Classifier {
     * @brief Classify the image and return the top-N labels alongside their
     *        predictions (or the network's output, in general).
     *
-    * TODO: Make it work with a vector<cv::Mat>
     */
   std::vector<std::vector<Prediction> >
   Classify(const std::vector<cv::Mat>& img, int N = 5);
@@ -88,36 +87,41 @@ class Classifier {
   InputGradientofClassifier(const cv::Mat& img, int k =0);
 
   /**
-   * @brief Preprocess the given cv::Mat image. If UINT8_TO_FLOAT32 has
-   *        value 'true' then the image will be transformed from a
-   *        OpenCV::UINT8 to an OpenCV::FLOAT32 representation.
+   * @brief Preprocess the given cv::Mat image. It is best to have the
+   *        image in a CV_8UC3 or CV_8UC1 representation. This function
+   *        will transform it to the appropriate CV_32FC3 or CV_32FC1
+   *        format. Passing a CV_32FC3 or CV_32FC1 image before yields
+   *        slightly different results.
    *
-   * TODO: Add similar functionality for Blob images?
+   * TODO: Add similar functionality for images already represented as
+   *       Blob<floats> ?
    *
    */
-  void Preprocess(cv::Mat& img, bool UINT8_TO_FLOAT32=false);
+  void Preprocess(cv::Mat& img);
 
   /**
-    * @brief Preprocess a vector of cv::Mat images. If UINT8_TO_FLOAT32 has
-    *        value 'true' then the image will be transformed from a
-    *        OpenCV::UINT8 to an OpenCV::FLOAT32 representation.
+    * @brief Preprocess a vector of cv::Mat images. It is best to have the
+    *        image in a CV_8UC3 or CV_8UC1 representation. This function
+    *        will transform it to the appropriate CV_32FC3 or CV_32FC1
+    *        format. Passing a CV_32FC3 or CV_32FC1 image before yields
+    *        slightly different results.
     */
-  void Preprocess(std::vector<cv::Mat>& data, bool UINT8_TO_FLOAT32=false);
+  void Preprocess(std::vector<cv::Mat>& data);
 
   /**
-   * @brief Return the layer names of the defined network.
+   * @brief Get the layer names of the defined network.
    */
   inline std::vector<string> get_layer_names() const {
     return net_->layer_names();
   }
 
   /**
-   * @brief Returns the labels.
+   * @brief Get the labels that the network can discriminate.
    */
   inline std::vector<string> get_labels() const { return labels_; }
 
   /**
-   * @brief Returns the geometry of the input data.
+   * @brief Get the geometry of the input data as a cv::Size object.
    *
    * TODO: MAYBE improve the function
    */
@@ -133,6 +137,12 @@ class Classifier {
     cv::imwrite("mean_image.jpeg", mean_);
   }
 
+  size_t get_label_index(std::string label_name);
+
+  /**
+   * @brief Get the mean image used for preprocessing
+   *
+   */
   inline cv::Mat get_mean() const { return mean_; }
 
  private:
@@ -143,7 +153,7 @@ class Classifier {
   // the labels that are related to the specific network
   std::vector<std::string> labels_;
 
-  // TODO: Use USE_OPENCV
+  // TODO: Use USE_OPENCV to avoid problems?
   cv::Size input_geometry_;
   int num_channels_;
   cv::Mat mean_;
@@ -151,7 +161,9 @@ class Classifier {
   // method to set the mean_ variable used for preprocessing the cv::Mat images
   void SetMean(const std::string& mean_file);
 
+  // TODO: REMOVE at a later stage
   void WrapInputLayer(std::vector<cv::Mat>* input_channels);
+
   /**
    * Used for data preprocessing
    * TODO: Remove this function
@@ -159,14 +171,16 @@ class Classifier {
   void Preprocess(const cv::Mat& img,
                   std::vector<cv::Mat>* input_channels);
 
+  // TODO: REMOVE that function
   void Input(const std::vector<cv::Mat>& data);
   void Input(const Blob<float>* data);
 
+  // TODO: Add a smilar function operating on Blob<float>* ?
   void ImportData(const std::vector<cv::Mat>& data);
 };
 
 // related functions for reading images from the directory
-cv::Mat read_image(std::string image_file);
+cv::Mat read_image(std::string image_file);//, bool UINT8_TO_FLOAT32=false);
 std::vector<cv::Mat> read_images_from_dir(std::string dir_name);
 std::vector<std::string> read_names_from_dir(std::string dir_name);
 
