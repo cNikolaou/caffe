@@ -140,59 +140,79 @@ int main(int argc, char** argv) {
   // TODO: Sanity checker
   LOG(INFO) << "Classifier initialized.";
 
-  // read image
-  cv::Mat img = caffe::read_image(FLAGS_images);
+  std::string file_or_dir = FLAGS_images;
 
-  Classifier cl(FLAGS_model, FLAGS_weights, FLAGS_mean_file, FLAGS_labels_file);
+  if (file_or_dir[file_or_dir.size() - 1] == '/') {
+
+    std::vector<cv::Mat> input_images = caffe::read_images_from_dir(file_or_dir);
+
+    df.Preprocess(input_images);
+
+    df.adversarial(input_images);
+
+  } else if (string(file_or_dir.end() - 4, file_or_dir.end())
+             == string(".jpg") ||
+             string(file_or_dir.end() - 5, file_or_dir.end())
+             == string(".JPEG")) {
+
+    // read image
+    cv::Mat img = caffe::read_image(file_or_dir);
 
 
-  // TODO: REMOVE the code; it is used only for checking purposes
+    // TODO: REMOVE the code; it is used only for checking purposes
 
-  double min, max;
+    Classifier cl(FLAGS_model, FLAGS_weights, FLAGS_mean_file, FLAGS_labels_file);
 
-  // TODO: Solve problem with reading and writting
-  std::cout << "--- Start: --- " << std::endl;
-  std::cout << "Cols x Rows before: " << img.rows << " x " << img.cols << std::endl;
-  std::cout << "Vals: " << (int) img.at<uchar>(0,0) << " " << (int) img.at<uchar>(100,100) << std::endl;
-  cv::minMaxLoc(img, &min, &max);
-  std::cout << "Before permute: min and max " << min << " " << max << std::endl << std::endl;
-  save_image(img, "Start_image.jpeg");
+    double min, max;
 
-  cv::Mat im2;// = cv::Mat(img).reshape(0, img.cols);
-  cv::transpose(img, im2);
-  std::cout << "--- Permute: --- " << std::endl;
-  std::cout << "Cols x Rows after: " << im2.rows << " x " << im2.cols << std::endl;
-  std::cout << "Vals: " << (int) im2.at<unsigned char>(0,0) << " " << (int) im2.at<uchar>(100,100) << std::endl;
-  cv::minMaxLoc(im2, &min, &max);
-  std::cout << "Before preprocess (after permute): min and max " << min << " " << max << std::endl << std::endl;
-  save_image(im2, "Permuted_image.jpeg");
+    // TODO: Solve problem with reading and writting
+    std::cout << "--- Start: --- " << std::endl;
+    std::cout << "Cols x Rows before: " << img.rows << " x " << img.cols << std::endl;
+    std::cout << "Vals: " << (int) img.at<uchar>(0,0) << " " << (int) img.at<uchar>(100,100) << std::endl;
+    cv::minMaxLoc(img, &min, &max);
+    std::cout << "Before permute: min and max " << min << " " << max << std::endl << std::endl;
+    save_image(img, "Start_image.jpeg");
 
-  cl.Preprocess(img);
-  std::cout << "--- Preprocess without permute: --- " << std::endl;
-  std::cout << "Cols x Rows after pp wo permute: " << img.rows << " x " << img.cols << std::endl;
-  std::cout << "Vals: " << img.at<float>(0,0) << " " << img.at<float>(100,100) << std::endl;
-  cv::minMaxLoc(img, &min, &max);
-  std::cout << "After preprocess: min and max " << min << " " << max << std::endl << std::endl;
-  save_image(img, "PreprocessWO_image.jpeg");
+    cv::Mat im2;// = cv::Mat(img).reshape(0, img.cols);
+    cv::transpose(img, im2);
+    std::cout << "--- Permute: --- " << std::endl;
+    std::cout << "Cols x Rows after: " << im2.rows << " x " << im2.cols << std::endl;
+    std::cout << "Vals: " << (int) im2.at<unsigned char>(0,0) << " " << (int) im2.at<uchar>(100,100) << std::endl;
+    cv::minMaxLoc(im2, &min, &max);
+    std::cout << "Before preprocess (after permute): min and max " << min << " " << max << std::endl << std::endl;
+    save_image(im2, "Permuted_image.jpeg");
 
-  cl.Preprocess(im2);
-  std::cout << "--- Preprocess with permute: --- " << std::endl;
-  std::cout << "Cols x Rows after pp with permute: " << img.rows << " x " << img.cols << std::endl;
-  std::cout << "vals: " << im2.at<float>(0,0) << " " << im2.at<float>(100,100) << std::endl;
-  cv::minMaxLoc(im2, &min, &max);
-  std::cout << "After preprocess with permute: min and max " << min << " " << max << std::endl << std::endl;
-  save_image(im2, "PreprocessWI_image.jpeg");
+    df.Preprocess(img);
+    std::cout << "--- Preprocess without permute: --- " << std::endl;
+    std::cout << "Cols x Rows after pp wo permute: " << img.rows << " x " << img.cols << std::endl;
+    std::cout << "Vals: " << img.at<float>(0,0) << " " << img.at<float>(100,100) << std::endl;
+    cv::minMaxLoc(img, &min, &max);
+    std::cout << "After preprocess: min and max " << min << " " << max << std::endl << std::endl;
+    save_image(img, "PreprocessWO_image.jpeg");
 
-  cv::minMaxLoc(im2, &min, &max);
-  std::cout << "After preprocess: min and max " << min << " " << max << std::endl;
-  std::cout << std::endl << std::endl;
-  LOG(INFO) << "Call deepfool";
+    cl.Preprocess(im2);
+    std::cout << "--- Preprocess with permute: --- " << std::endl;
+    std::cout << "Cols x Rows after pp with permute: " << img.rows << " x " << img.cols << std::endl;
+    std::cout << "vals: " << im2.at<float>(0,0) << " " << im2.at<float>(100,100) << std::endl;
+    cv::minMaxLoc(im2, &min, &max);
+    std::cout << "After preprocess with permute: min and max " << min << " " << max << std::endl << std::endl;
+    save_image(im2, "PreprocessWI_image.jpeg");
 
-  std::cout << cl.print_mean_file(0,0) << std::endl;
-  cl.save_mean_as_image();
+    cv::minMaxLoc(im2, &min, &max);
+    std::cout << "After preprocess: min and max " << min << " " << max << std::endl;
+    std::cout << std::endl << std::endl;
+    LOG(INFO) << "Call deepfool";
 
-  // compute perturbations
-  df.adversarial(img);
+    std::cout << cl.print_mean_file(0,0) << std::endl;
+    cl.save_mean_as_image();
+
+    // compute perturbations
+    df.adversarial(img);
+
+  } else {
+    std::cout << "No images were specified";
+    exit(1);
+  }
 
   LOG(INFO) << "Adversarial Found";
   // compute perturbation by calling the appropriate function

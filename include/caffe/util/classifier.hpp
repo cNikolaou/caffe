@@ -176,7 +176,7 @@ class Classifier {
   void Input(const Blob<float>* data);
 
   // TODO: Add a smilar function operating on Blob<float>* ?
-  void ImportData(const std::vector<cv::Mat>& data);
+  void ImportData(const std::vector<cv::Mat>& data, bool RESHAPE=true);
 };
 
 // related functions for reading images from the directory

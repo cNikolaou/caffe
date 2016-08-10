@@ -211,7 +211,8 @@ void Classifier::Input(const std::vector<cv::Mat>& data) {
 //       out if it works for other data types as well.
 
 // Import the images (data) to the input layer of the network
-void Classifier::ImportData(const std::vector<cv::Mat>& data) {
+void Classifier::ImportData(const std::vector<cv::Mat>& data,
+                            bool RESHAPE) {
 
   // For C++98 compatibility instead of doing:
   // vector<int> vec = { ... }
@@ -219,15 +220,18 @@ void Classifier::ImportData(const std::vector<cv::Mat>& data) {
   int data_dimensions[]
             = { data.size(), data[0].channels(), data[0].rows, data[0].cols };
 
-  /*std::cout << "Input dimensions will be: " << dimensions[0] << " "
-      << dimensions[1] << " " << dimensions[2] << " "
-      << dimensions[3] << std::endl;
-  */
-  Blob<float>* input_layer = net_->input_blobs()[0];
-  input_layer->Reshape(data_dimensions[0], data_dimensions[1],
-                       data_dimensions[2], data_dimensions[3]);
+  std::cout << "Input dimensions will be: "
+            << data_dimensions[0] << " " << data_dimensions[1] << " "
+            << data_dimensions[2] << " " << data_dimensions[3] << std::endl;
 
-  net_->Reshape();
+  Blob<float>* input_layer = net_->input_blobs()[0];
+
+  if (RESHAPE) {
+    input_layer->Reshape(data_dimensions[0], data_dimensions[1],
+                         data_dimensions[2], data_dimensions[3]);
+
+    net_->Reshape();
+  }
 
   float* input_data = input_layer->mutable_cpu_data();
 
@@ -532,6 +536,13 @@ void Classifier::Preprocess(std::vector<cv::Mat>& data) {
 std::vector<std::vector<float> >
 Classifier::InputGradientofClassifier(const std::vector<cv::Mat>& img, int k) {
 
+
+  // TODO: REMOVE Just for testing
+  if (k%100 == 0) {
+    std::cout << "First Grad; classifier " << k << std::endl;
+  }
+
+
   Blob<float>* input_layer = net_->input_blobs()[0];
 
   // Check if the network has already been reshaped to represent
@@ -540,10 +551,13 @@ Classifier::InputGradientofClassifier(const std::vector<cv::Mat>& img, int k) {
   // this process uses fewer resources as we don't need the predictions.
   if (input_layer->num() != img.size()) {
 
-    LOG(INFO) << "Into the Forward pass of InputGradient";
+    LOG(INFO) << "Into the Forward pass of InputGradient with "
+              << input_layer->num() << " defined and "
+              << img.size() << " input images";
+
     // Import images to the network and perform a forward pass
     //Input(img);
-    ImportData(img);
+    ImportData(img,false);
     net_->Forward();
 
   } // else the network has already been used for those images?
@@ -637,11 +651,6 @@ Classifier::InputGradientofClassifier(const std::vector<cv::Mat>& img, int k) {
 
 std::vector<std::vector<float> >
 Classifier::InputGradientofClassifier(const cv::Mat& img, int k) {
-
-  // TODO: REMOVE Just for testing
-  if (k%100 == 0) {
-    std::cout << "First Grad; classifier " << k << std::endl;
-  }
 
   // TODO: Do it in one line?
   std::vector<cv::Mat> img_mat;

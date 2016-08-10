@@ -4,7 +4,7 @@
 # which will be used during the computation.
 
 echo "Start script for computing adversarial examples"
-DATA=~/DeepFool/resources/test.jpg
+DATA=~/image_folder/
 NETWORK=~/DeepFool/resources/deploy_caffenet.prototxt
 WEIGHTS=~/DeepFool/bvlc_reference_caffenet.caffemodel
 LABELS=~/caffe/data/ilsvrc12/synset_words.txt
